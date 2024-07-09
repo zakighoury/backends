@@ -29,6 +29,7 @@ router.post("/add", async (req, res) => {
     });
 
     await wishlistItem.save();
+    console.log("🚀 ~ router.post ~ wishlistItem:", wishlistItem)
     res.status(200).json({ message: "Item added to wishlist", wishlistItem });
   } catch (error) {
     res.status(500).json({ message: "Error adding to wishlist", error });
@@ -42,6 +43,8 @@ router.get("/:userId", async (req, res) => {
   try {
     const wishlistItems = await Wishlist.find({ userId }).populate('CartItem');
     res.status(200).json(wishlistItems);
+    
+    console.log("🚀 ~ router.get ~ wishlistItems:", wishlistItems)
   } catch (error) {
     res.status(500).json({ message: "Error fetching wishlist", error });
   }

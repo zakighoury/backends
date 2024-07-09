@@ -4,11 +4,12 @@ const jwt = require("jsonwebtoken");
 const router = express.Router();
 const User = require("../Model/UserModel");
 const transporter = require("./transporter");
+const { generateOTP, generateOTPToken, verifyOTPToken } = require("./otpService");
 
 const JWT_SECRET = process.env.JWT_SECRET; // Ensure you set this in your .env file
 
 // Endpoint for initiating password reset
-router.post("/reset-password", async (req, res) => {
+router.post("/api/reset-password", async (req, res) => {
   const { email } = req.body;
 
   try {
@@ -17,48 +18,71 @@ router.post("/reset-password", async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Generate a token with a short expiration time
-    const token = jwt.sign({ email, userId: user._id }, JWT_SECRET, { expiresIn: "1h" });
+    // Generate OTP
+    const otp = generateOTP();
+    console.log(otp); // Log OTP for testing purposes, remove in production
 
-    // Create reset link
-    const resetLink = `http://localhost:3000/reset-password/verify-token/${user._id}/${token}`;
-    console.log(resetLink);
+    // Generate a token with the OTP and user ID
+    const otpToken = generateOTPToken(otp, user._id, JWT_SECRET);
 
-    // Send reset link via email
+    // Send OTP via email
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: email,
-      subject: "Password Reset Link",
-      text: `Click the following link to reset your password: ${resetLink}`,
+      subject: "Your Password Reset OTP",
+      text: `Your OTP for password reset is: ${otp}`,
     };
 
     await transporter.sendMail(mailOptions);
-    res.status(200).json({ success: true, message: "Password reset link sent to your email" });
+    res.status(200).json({ success: true, message: "OTP sent to your email", userId: user._id, otpToken });
   } catch (error) {
     console.error("Error:", error);
     res.status(500).json({ message: "Server error" });
   }
 });
 
-// Endpoint for verifying token and resetting password
-router.post("/reset-password/verify-token/:userId/:token", async (req, res) => {
-  const { userId, token } = req.params;
-  const { newPassword } = req.body;
+router.post("/reset-password/verify-otp", async (req, res) => {
+  const { userId, otpToken, otp } = req.body;
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    if (decoded.userId !== userId) {
-      return res.status(401).json({ message: "Unauthorized access" });
+    // Verify OTP token
+    const decoded = verifyOTPToken(otpToken, JWT_SECRET);
+    if (!decoded || decoded.userId !== userId || decoded.otp !== otp) {
+      return res.status(401).json({ success: false, message: "Invalid or expired OTP" });
     }
 
+    // Find user by userId
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    // Update password
+    // Generate a token for resetting password
+    const resetToken = jwt.sign({ userId }, JWT_SECRET, { expiresIn: "1h" });
+
+    res.status(200).json({ success: true, message: "OTP verified", token: resetToken });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+router.post("/reset-password/new-password", async (req, res) => {
+  const { newPassword, token } = req.body;
+
+  try {
+    // Verify and decode the reset token
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+
+    // Find user by userId
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    // Update user's password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    console.log(hashedPassword);
     user.password = hashedPassword;
     await user.save();
 
@@ -66,9 +90,9 @@ router.post("/reset-password/verify-token/:userId/:token", async (req, res) => {
   } catch (error) {
     console.error("Error:", error);
     if (error.name === "TokenExpiredError") {
-      return res.status(400).json({ message: "Token has expired" });
+      return res.status(400).json({ success: false, message: "Token has expired" });
     }
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ success: false, message: "Server error" });
   }
 });
 

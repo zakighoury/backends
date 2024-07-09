@@ -58,39 +58,4 @@ router.get("/payment-intents", async (req, res) => {
   }
 });
 
-
-
-// router.post('/orders', async (req, res) => {
-//   const newOrder = {
-//     id: `order_${uuidv4()}`,
-//     ...req.body,
-//     created: new Date()
-//   };
-
-//   try {
-//     const createdOrder = await Order.create(newOrder);
-//     res.status(200).json(createdOrder);
-//   } catch (error) {
-//     console.error('Error creating order:', error);
-//     res.status(500).json({ message: 'Error creating order' });
-//   }
-// });
-// // Update payment intent
-// router.put("/payment-intents/:id", async (req, res) => {
-//   const { id } = req.params;
-//   const { amount, currency, status } = req.body;
-
-//   try {
-//     const updatedIntent = await stripe.paymentIntents.update(id, {
-//       amount: amount * 100, // converting to cents
-//       currency: currency,
-//       metadata: { status: status }, // assuming status is a custom metadata
-//     });
-
-//     res.json({ paymentIntent: updatedIntent });
-//   } catch (error) {
-//     res.status(500).json({ error: error.message });
-//   }
-// });
-
 module.exports = router;

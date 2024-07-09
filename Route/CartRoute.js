@@ -103,7 +103,7 @@ router.post("/cart/add", async (req, res) => {
 
     // Save the new cart item to the database
     await newCartItem.save();
-console.log(newCartItem,"CartitemNew")
+    // console.log(newCartItem, "CartitemNew")
     res.status(200).json({ message: "Item added to cart successfully!" });
   } catch (error) {
     console.error("Error adding item to cart:", error);
@@ -120,7 +120,7 @@ router.get("/Cart/items/:userId", async (req, res) => {
       path: "Cart",
       strictPopulate: false,
     });
-    console.log("Cart items:", cartItems);
+    // console.log("Cart items:", cartItems);
     res.json({ items: cartItems });
   } catch (error) {
     console.error("Error fetching cart items:", error);
@@ -141,12 +141,12 @@ router.delete("/cart/items/:userId/:itemId", async (req, res) => {
 });
 router.put("/api/cart/:id", async (req, res) => {
   const { id } = req.params;
-  const { name, price, quantity } = req.body;
+  const { name, price, quantity,color,size,category,subcategory } = req.body;
 
   try {
     const updatedItem = await Cart.findByIdAndUpdate(
       id,
-      { name, price, quantity },
+      { name, price, quantity,color,size,category,subcategory },
       { new: true }
     );
     res.json(updatedItem);
@@ -169,52 +169,52 @@ router.delete("/api/cart/:id", async (req, res) => {
   }
 });
 
-router.post("/api/orders", async (req, res) => {
-  try {
-    const {
-      userId,
-      cartItems,
-      subtotal,
-      shippingCost,
-      grandTotal,
-      coupon,
-      discount,
-      billingDetails,
-      shippingAddress,
-      shippingMethod,
-      paymentMethod,
-      orderStatus,
-      paymentDetails,
-    } = req.body;
-    const orderNumber = uuidv4();
-    const newOrder = new Order({
-      userId,
-      cartItems,
-      subtotal,
-      shippingCost,
-      grandTotal,
-      coupon,
-      discount,
-      billingDetails,
-      shippingAddress,
-      shippingMethod,
-      paymentMethod,
-      orderNumber,
-      orderStatus,
-      paymentDetails,
-    });
-    newOrder.calculateEstimatedDeliveryDate();
-    await newOrder.save();
-    console.log(newOrder);
-    res.status(200).json({ message: "Order placed successfully!" });
-  } catch (error) {
-    console.error("Error placing order:", error);
-    res
-      .status(500)
-      .json({ message: "Failed to place order. Please try again." });
-  }
-});
-router.get("/api/orders", async (req, res) => {
+// router.post("/api/orders", async (req, res) => {
+//   try {
+//     const {
+//       userId,
+//       cartItems,
+//       subtotal,
+//       shippingCost,
+//       grandTotal,
+//       coupon,
+//       discount,
+//       billingDetails,
+//       shippingAddress,
+//       shippingMethod,
+//       paymentMethod,
+//       orderStatus,
+//       paymentDetails,
+//     } = req.body;
+//     const orderNumber = uuidv4();
+//     const newOrder = new Order({
+//       userId,
+//       cartItems,
+//       subtotal,
+//       shippingCost,
+//       grandTotal,
+//       coupon,
+//       discount,
+//       billingDetails,
+//       shippingAddress,
+//       shippingMethod,
+//       paymentMethod,
+//       orderNumber,
+//       orderStatus,
+//       paymentDetails,
+//     });
+//     newOrder.calculateEstimatedDeliveryDate();
+//     await newOrder.save();
+//     console.log(newOrder);
+//     res.status(200).json({ message: "Order placed successfully!" });
+//   } catch (error) {
+//     console.error("Error placing order:", error);
+//     res
+//       .status(500)
+//       .json({ message: "Failed to place order. Please try again." });
+//   }
+// });
+router.get("/api/orders/all", async (req, res) => {
   try {
     const orders = await Order.find();
     if (!orders) {
@@ -222,36 +222,22 @@ router.get("/api/orders", async (req, res) => {
         .status(404)
         .json({ message: "No orders found for this user." });
     }
-    res.json(orders);
+    res.status(200).json({ orders, message: "Orders fetched successfully!" });
+    console.log(orders);
   } catch (error) {
     console.error("Error fetching orders:", error);
     res.status(500).json({ message: "Server error" });
   }
 });
-router.put("/api/orders/:orderId", async (req, res) => {
-  const { orderId } = req.params;
-  const updatedOrderData = req.body;
+router.put('/api/orders/:id', async (req, res) => {
+  const { id } = req.params;
+  const updateData = req.body;
 
   try {
-    const order = await Order.findById(orderId);
-
-    if (!order) {
-      return res.status(404).json({ message: "Order not found" });
-    }
-
-    // Update the order fields
-    order.orderNumber = updatedOrderData.orderNumber || order.orderNumber;
-    order.estimatedDeliveryDate =
-      updatedOrderData.estimatedDeliveryDate || order.estimatedDeliveryDate;
-    order.grandTotal = updatedOrderData.grandTotal || order.grandTotal;
-    order.orderStatus = updatedOrderData.orderStatus || order.orderStatus;
-    order.cartItems = updatedOrderData.cartItems || order.cartItems;
-
-    await order.save();
-    res.json(order);
+    const updatedOrder = await Order.findByIdAndUpdate(id, updateData, { new: true });
+    res.json(updatedOrder);
   } catch (error) {
-    console.error("Error updating order:", error);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: 'Error updating order', error });
   }
 });
 router.get("/api/orders/:userId", async (req, res) => {
@@ -281,6 +267,7 @@ router.route("/api/orders/:userId/:orderId").get(async (req, res) => {
     }
 
     res.json(order);
+    console.log(order);
   } catch (error) {
     res.status(500).json({ error: "Internal server error" });
   }

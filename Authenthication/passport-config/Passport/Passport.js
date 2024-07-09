@@ -6,6 +6,7 @@ const multer = require("multer");
 const cloudinary = require("cloudinary").v2;
 const path = require("path");
 const fs = require("fs");
+const { url } = require("inspector");
 
 cloudinary.config({
   cloud_name: "dzn3h2a8s",
@@ -120,21 +121,24 @@ router.put(
   }
 );
 
-// Upload avatar route
 router.post(
-  "/upload-avatar",upload.single("avatar"),
+  "/upload-avatar",
+  passport.authenticate("jwt", { session: false }),
+  upload.single("avatar"),
   async (req, res) => {
     try {
       const user = await User.findById(req.user._id);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      const result = await cloudinary.uploader.upload(req.file.path);
 
-      user.avatar =  result.secure_ur;
-      console.log(result,"result")
+      const result = await cloudinary.uploader.upload(req.file.path);
+      user.avatar = result.secure_url;
       await user.save();
-      res.json({ url: req.file.path });
+      console.log(user);
+      // Remove the file from the server after uploading to Cloudinary
+      // fs.unlinkSync(req.file.path);
+      res.status(200).json({ message: "Avatar uploaded successfully", url: result.secure_url });
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
